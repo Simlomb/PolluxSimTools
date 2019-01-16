@@ -527,7 +527,32 @@ class SpectrographicExposure(Exposure):
                 snr = source_counts/np.sqrt(source_counts + 0.75*((bg_counts)+dark+ cc_n*2.4**2 *bg_counts.unit))
             else:
                 #print('AVERAAAGE ', np.mean(source_counts))
-                snr = source_counts / np.sqrt((source_counts + (bg_counts)+dark)*2+(ron*2.4)**2* bg_counts.unit) #photon counting case 
+                mask_source = (source_counts.value>=8.e4)
+                print('SOOOURCEEE ', np.max(source_counts),source_counts[mask_source].size)
+                mask_gain = (source_counts.value*self.gain_pollux>=5.e5)
+                num_frame = 1
+                exp_frame = exptime
+                if source_counts[mask_source].size > 0 or source_counts[mask_gain].size > 0:
+                    exp_frame = exptime*8.e4* bg_counts.unit/np.max(source_counts)
+                    if source_counts[mask_gain].size > 0:
+                        exp_frame = exptime*5.e5* bg_counts.unit/np.max(source_counts*self.gain_pollux)
+                    if exp_frame.value < 0.120 :
+                        exp_frame = 0.120*exptime.unit
+                        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                        print('WARNING: the signal level is saturated in some region of the spectrum')
+                        print('You can use a higher magnitude to avoid it')
+                        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                    num_frame = (exptime/exp_frame).astype(int)
+                    mask_source = (source_counts.value/num_frame>=8.e4)
+                    mask_gain = (source_counts.value*self.gain_pollux/num_frame>=5.e5)
+                    print('HEEELOOOO ', exp_frame,num_frame, np.max(source_counts), exptime)
+                source_counts[mask_source] = 8.e4* bg_counts.unit*num_frame
+                source_counts[mask_gain] = 8.e4* bg_counts.unit*num_frame
+                
+                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
+                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                snr = source_counts / np.sqrt((source_counts + (bg_counts)+dark)*2+(ron*2.4)**2*num_frame* bg_counts.unit) #photon counting case 
         else:
             snr = source_counts / np.sqrt(source_counts + bg_counts)
         
@@ -704,35 +729,37 @@ class SpectrographicExposure(Exposure):
     def compute_clock_charge_noise(self,exposure_time,signal):
         """
         """
+        gain = 1000.
         fwc = 8.e4 *signal.unit# full well capacity
         register_c = 5.e9*signal.unit #register capacity
         cc_n = 0.005 # clock charge induced noise
-        treshold = 250.*signal.unit
-        mask_treshold = (np.max(signal.value) > treshold.value)*(np.max(signal.value) <= treshold.value+5)
-        if signal[mask_treshold].size >0:
-            return cc_n, signal
+        threshold = 250.*signal.unit
+        signal = signal*gain
+        mask_threshold = (np.max(signal.value) > threshold.value)*(np.max(signal.value) <= threshold.value+5)
+        if signal[mask_threshold].size >0:
+            return cc_n, signal/gain
         else:
-            exp_frame = exposure_time*treshold/np.max(signal)
+            exp_frame = exposure_time*threshold/np.max(signal)
             num_frame = (exposure_time/exp_frame).astype(int)
             
             if exp_frame.value < 0.120 :
                 exp_frame = 0.120*exposure_time.unit
                 num_frame = (exposure_time/exp_frame).astype(int)
                 signal_frame = signal/num_frame
-                mask_fwc = signal_frame.value >= fwc.value
-                signal_frame[mask_fwc] = fwc
-                mask_register = signal_frame.value*1000>=register_c.value
-                readout_signal = np.copy(signal_frame*1000.)
-                readout_signal[mask_register] = register_c
-                signal_frame[mask_register] = fwc
-                if signal_frame[mask_fwc].size >0 or readout_signal[mask_register].size>0:
-                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                    print('WARNING: the signal level is saturated in some region of the spectrum')
-                    print('You can use a higher magnitude to avoid it')
-                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                    signal = signal_frame *num_frame   
+                #mask_fwc = signal_frame.value >= fwc.value
+                #signal_frame[mask_fwc] = fwc
+            mask_register = (signal/num_frame)>=threshold#register_c.value
+            #readout_signal = np.copy(signal_frame*1000.)
+            #readout_signal[mask_register] = threshold#register_c
+            signal[mask_register] = threshold*num_frame
+            if signal[mask_register].size >0:
+                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                print('WARNING: the signal level is saturated in some region of the spectrum')
+                print('You can use a higher magnitude to avoid it')
+                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                #signal = signal_frame *num_frame   
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-            return cc_n*num_frame, signal
+            return cc_n*num_frame, signal/gain
             
