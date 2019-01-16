@@ -46,3 +46,4 @@ You can also decide to have the image or the s/n or both in the photon counting 
 python main_pollux.py -i mdwarf2 -m 7 -e 0.5 -p 1
 
 the exposure time in input will be the total exposure time, and the exposure time of each frame will be automatically calculated and printed on the terminal.
+More info can be found in POLLUX_simulator.pdf
