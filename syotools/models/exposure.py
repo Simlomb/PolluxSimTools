@@ -87,6 +87,7 @@ class Exposure(PersistentModel):
     _exptime = pre_encode(np.zeros(1, dtype=float) * u.s)
     _snr = pre_encode(np.zeros(1, dtype=float) * u.dimensionless_unscaled)
     _final_image = pre_encode(np.zeros(1, dtype=float) * u.dimensionless_unscaled)
+    _wave_image = pre_encode(np.zeros(1, dtype=float) * u.dimensionless_unscaled)
     _magnitude = pre_encode(np.zeros(1, dtype=float) * u.ABmag)
     _redshift = 0.
     _unknown = '' #one of 'snr', 'magnitude', 'exptime'
@@ -149,6 +150,10 @@ class Exposure(PersistentModel):
     @property
     def final_image(self):
         return self._final_image
+
+    @property
+    def wave_image(self):
+        return self._wave_image
     
     @snr.setter
     def snr(self, new_snr):
@@ -161,6 +166,13 @@ class Exposure(PersistentModel):
         if self.unknown == "final_image":
             return
         self._final_image = self._ensure_array(new_final_image)
+        self.calculate(make_image=False)
+
+    @wave_image.setter
+    def wave_image(self, new_wave_image):
+        if self.unknown == "wave_image":
+            return
+        self._wave_image = self._ensure_array(new_wave_image)
         self.calculate(make_image=False)
 
     @property
@@ -591,10 +603,9 @@ class SpectrographicExposure(Exposure):
                 wave_mask = wave_mask + wave_mask1
             
         pixelized_matrix = self.bin_ndarray(matrix, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
-        pixelized_wmatrix = self.bin_ndarray(wave_mask, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
+        wave_image = self.bin_ndarray(wave_mask, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
         #make ccd image
         
-        #
         dim_array = np.shape(pixelized_matrix)#len(pixelized_matrix[0])
         fwc = 8.e4 # full well capacity
         register_c = 5.e9 #register capacity
@@ -622,6 +633,7 @@ class SpectrographicExposure(Exposure):
         
 
         self._final_image = pre_encode(final_image)
+        self._wave_image = pre_encode(wave_image)
         print('Image done!')
         
     def bin_ndarray(self,ndarray, new_shape, operation='sum'):

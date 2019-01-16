@@ -32,7 +32,7 @@ if 'LUVOIR_SIMTOOLS_DIR' not in os.environ:
     fdir = os.path.abspath(__file__)
     basedir = os.path.abspath(os.path.join(fdir, '..'))
     os.environ['LUVOIR_SIMTOOLS_DIR'] = basedir
-    print('eeeee  ', basedir)
+    #print('eeeee  ', basedir)
 
 if __name__ == '__main__':
     ##########################################################################
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_option("-a", "--aperture",
                       help="Telescope aperture in m", default='15.')
     parser.add_option("-c", "--channel_mode",
-                      help="Channel and operation mode", default='NUV_POL')
+                      help="Channel and operation mode, it can be NUV_POL, MUV_POL, FUV_POL, NUV_SPEC, MUV_SPEC, FUV_SPEC", default='NUV_POL')
     parser.add_option("-s", "--show_plot",
                       help="show the image and save it", default='1')
     parser.add_option("-f", "--file_name",
@@ -151,6 +151,7 @@ class POLLUX_IMAGE(SYOTool):
             self.plot_image()
             print('Saving the file at', basedir,'/pollux_tool/files/')
             np.savetxt(basedir+'/pollux_tool/files/'+self.file_name+'_'+self.grating+'_2dimage_data.txt', self._final_image)
+            np.savetxt(basedir+'/pollux_tool/files/'+self.file_name+'_'+self.grating+'_2dimage_wavelength.txt', self._wave_image)
         
 
     def tool_preinit(self):
@@ -269,6 +270,10 @@ class POLLUX_IMAGE(SYOTool):
     @property
     def _final_image(self):
         return np.nan_to_num(self.exposure.recover('final_image'))
+  
+    @property
+    def _wave_image(self):
+        return np.nan_to_num(self.exposure.recover('wave_image'))
     
     
 POLLUX_IMAGE()
