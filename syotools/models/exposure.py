@@ -3,6 +3,7 @@
 """
 Created on Mon Oct 30 12:31:11 2017
 @author: gkanarek
+@author pollux side: Simlomb (Simona Lombardo)
 """
 
 from __future__ import (print_function, division, absolute_import, with_statement,
