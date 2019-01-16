@@ -3,7 +3,7 @@
 """
 Created on Wed Nov 29 13:13:28 2017
 
-@author: gkanarek
+@author: Simlomb (Simona Lombardo)
 """
 
 from __future__ import (print_function, division, absolute_import, with_statement,
