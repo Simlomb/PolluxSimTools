@@ -503,56 +503,26 @@ class SpectrographicExposure(Exposure):
         scaled_aeff = aeff * (aper / (15 * u.m))**2
         source_counts = iflux / phot_energy * scaled_aeff * exptime * delta_lambda
         bg_counts = bef / phot_energy * scaled_aeff * exptime * delta_lambda
-        
-        """###ORIGINAL CALCULATION
-        wlo, whi = wrange
-        
-        aef_interp = np.interp(swave, wave, aeff, left=0., #interpolated effective areas for input spectrum
-                              right=0.) * aeff.unit * (aper / (15. * u.m))**2
-        bef_interp = np.interp(swave, wave, bef, left=0.,right=0.) * bef.unit  #interpolated background emission
-        phot_energy = const.h.to(u.erg * u.s) * const.c.to(u.cm / u.s) / swave.to(u.cm)
-        
-        #calculate counts from source
-        source_counts = sflux / phot_energy * aef_interp * exptime * swave / R
-        source_counts[(swave < wlo)] = 0.0
-        source_counts[(swave > whi)] = 0.0
-        
-        #calculate counts from background
-        bg_counts = bef_interp / phot_energy * aef_interp * exptime * swave / R"""
+      
         if self.spectrograph.name == 'POLLUX':
-            dark = (2.4**2/3600.)*exptime/u.s * bg_counts.unit
-            ron = 50./self.gain_pollux
+            box_pixel = 2.4**2
+            dark = (box_pixel/3600.)*exptime/u.s * bg_counts.unit # dark noise
+            ron = 50./self.gain_pollux # readout noise
             if self.counting_mode == 1:
-                cc_n, source_counts = self.compute_clock_charge_noise(exptime,source_counts*0.75)
-                snr = source_counts/np.sqrt(source_counts + 0.75*((bg_counts)+dark+ cc_n*2.4**2 *bg_counts.unit))
+                num_frame, exp_frame, source_counts = self.compute_num_frame(exptime,source_counts,self.gain_pollux)
+                cc_n = 0.005 * num_frame * box_pixel * bg_counts.unit # clock induced charge noise
+                mask_final = source_counts.value*self.gain_pollux >= num_frame*250.
+                source_counts[mask_final] = num_frame*250.* bg_counts.unit
+                source_counts[~mask_final] = 0.* bg_counts.unit
+                snr = source_counts/np.sqrt(source_counts + 0.75*(bg_counts+dark+ cc_n))
             else:
-                #print('AVERAAAGE ', np.mean(source_counts))
-                mask_source = (source_counts.value>=8.e4)
-                print('SOOOURCEEE ', np.max(source_counts),source_counts[mask_source].size)
-                mask_gain = (source_counts.value*self.gain_pollux>=5.e5)
-                num_frame = 1
-                exp_frame = exptime
-                if source_counts[mask_source].size > 0 or source_counts[mask_gain].size > 0:
-                    exp_frame = exptime*8.e4* bg_counts.unit/np.max(source_counts)
-                    if source_counts[mask_gain].size > 0:
-                        exp_frame = exptime*5.e5* bg_counts.unit/np.max(source_counts*self.gain_pollux)
-                    if exp_frame.value < 0.120 :
-                        exp_frame = 0.120*exptime.unit
-                        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                        print('WARNING: the signal level is saturated in some region of the spectrum')
-                        print('You can use a higher magnitude to avoid it')
-                        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                    num_frame = (exptime/exp_frame).astype(int)
-                    mask_source = (source_counts.value/num_frame>=8.e4)
-                    mask_gain = (source_counts.value*self.gain_pollux/num_frame>=5.e5)
-                    print('HEEELOOOO ', exp_frame,num_frame, np.max(source_counts), exptime)
-                source_counts[mask_source] = 8.e4* bg_counts.unit*num_frame
-                source_counts[mask_gain] = 8.e4* bg_counts.unit*num_frame
+                num_frame, exp_frame, source_counts, mask_gain = self.compute_num_frame(exptime,source_counts,self.gain_pollux)
+                source_counts[mask_gain] = 8.e4* source_counts.unit*num_frame
+                snr = source_counts / np.sqrt((source_counts + bg_counts+dark)*2+(ron**2*box_pixel*num_frame* bg_counts.unit)) #photon counting case               
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+            print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
                 
-                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
-                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                snr = source_counts / np.sqrt((source_counts + (bg_counts)+dark)*2+(ron*2.4)**2*num_frame* bg_counts.unit) #photon counting case 
         else:
             snr = source_counts / np.sqrt(source_counts + bg_counts)
         
@@ -632,30 +602,32 @@ class SpectrographicExposure(Exposure):
         #make ccd image
         
         dim_array = np.shape(pixelized_matrix)#len(pixelized_matrix[0])
-        fwc = 8.e4 # full well capacity
-        register_c = 5.e9 #register capacity
         dark = (1/3600.)*exptime/u.s #* bg_counts.unit
         noise_dark = np.ones((dim_array))*dark #dark current image
         ron=50./self.gain_pollux
         ron_err = ron*0.015
-        image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)
+        image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)              
         if self.counting_mode == 1:
             ron_image = 0.
-            gain_image = np.random.normal(np.ones((dim_array)),0.001,dim_array) # pixel non uniformity image with excess noise factor
-            cc_n, image_electron = self.compute_clock_charge_noise(exptime,gain_image*0.75*image_electron * u.dimensionless_unscaled)
-            #ccn_image = np.random.normal(cc_n,0.001,dim_array)
-            final_image = image_electron*gain_image+cc_n*0.75*gain_image
+            gain_image = np.random.normal(np.ones((dim_array)),0.001,dim_array) # pixel non uniformity image
+            num_frame, exp_frame, image_electron = self.compute_num_frame(exptime,gain_image*0.75*image_electron * u.dimensionless_unscaled,self.gain_pollux)
+            cc_n = 0.005 * num_frame
+            final_image = image_electron*self.gain_pollux+cc_n*0.75*gain_image
+            mask_final = final_image >= num_frame*250.
+            final_image[mask_final] = num_frame*250.
+            final_image[~mask_final] = cc_n*0.75*gain_image[~mask_final]
         else:
             ron_image = np.random.normal(ron,ron_err,dim_array) # ron image
             gain_err = np.sqrt(2.)
             gain_image = np.random.normal(np.ones((dim_array))*self.gain_pollux,gain_err,dim_array) # pixel non uniformity image with excess noise factor
-            mask_fwc = image_electron >= fwc 
-            image_electron[mask_fwc] = fwc
+            num_frame, exp_frame, image_electron,mask_gain = self.compute_num_frame(exptime,image_electron * u.dimensionless_unscaled,self.gain_pollux)
             final_image = image_electron*gain_image+ron_image
-        mask_register = final_image >= register_c 
-        final_image[mask_register] = register_c
+        mask_gain = final_image >= 5.e5 
+        final_image[mask_gain] = 5.e5
         #final_image = np.zeros((self.num_pix_y,self.num_pix_x))
-        
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
         self._final_image = pre_encode(final_image)
         self._wave_image = pre_encode(wave_image)
@@ -726,40 +698,51 @@ class SpectrographicExposure(Exposure):
 
 
 
-    def compute_clock_charge_noise(self,exposure_time,signal):
+    def compute_num_frame(self,exptime,signal,gain):
         """
         """
-        gain = 1000.
-        fwc = 8.e4 *signal.unit# full well capacity
-        register_c = 5.e9*signal.unit #register capacity
-        cc_n = 0.005 # clock charge induced noise
-        threshold = 250.*signal.unit
-        signal = signal*gain
-        mask_threshold = (np.max(signal.value) > threshold.value)*(np.max(signal.value) <= threshold.value+5)
-        if signal[mask_threshold].size >0:
-            return cc_n, signal/gain
+        
+        fwc = 8.e4 # full well capacity
+        register_c = 5.e9 #register capacity
+        #cc_n = 0.005 # clock charge induced noise
+        num_frame = 1
+        exp_frame = exptime
+        if self.counting_mode == 1:
+            threshold = 250.*signal.unit
+            signal = 0.75*signal*gain
+            mask_threshold = (np.max(signal.value) > threshold.value)*(np.max(signal.value) <= threshold.value+5)
+            if signal[mask_threshold].size >0:
+                '''do nothing'''
+            else:
+                exp_frame = exptime*threshold/np.max(signal)
+                num_frame = (exptime/exp_frame).astype(int)
+                if exp_frame.value < 0.120 :
+                    exp_frame = 0.120*exptime.unit
+                    num_frame = (exptime/exp_frame).astype(int)
+                mask_register = (signal/num_frame)>=threshold#register_c.value
+                signal[mask_register] = threshold*num_frame
+                if signal[mask_register].size >0:
+                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                    print('WARNING: the signal level might be saturated in some region of the spectrum')
+                    print('You can use a higher magnitude/lower exposure time to avoid it')
+                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+            return num_frame, exp_frame, signal/gain
         else:
-            exp_frame = exposure_time*threshold/np.max(signal)
-            num_frame = (exposure_time/exp_frame).astype(int)
-            
-            if exp_frame.value < 0.120 :
-                exp_frame = 0.120*exposure_time.unit
-                num_frame = (exposure_time/exp_frame).astype(int)
-                signal_frame = signal/num_frame
-                #mask_fwc = signal_frame.value >= fwc.value
-                #signal_frame[mask_fwc] = fwc
-            mask_register = (signal/num_frame)>=threshold#register_c.value
-            #readout_signal = np.copy(signal_frame*1000.)
-            #readout_signal[mask_register] = threshold#register_c
-            signal[mask_register] = threshold*num_frame
-            if signal[mask_register].size >0:
-                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                print('WARNING: the signal level is saturated in some region of the spectrum')
-                print('You can use a higher magnitude to avoid it')
-                print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                #signal = signal_frame *num_frame   
-            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-            print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
-            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-            return cc_n*num_frame, signal/gain
-            
+            mask_source = (signal.value>=fwc)
+            mask_gain = (signal.value*gain>=register_c)
+            if signal[mask_source].size > 0 or signal[mask_gain].size > 0:
+                exp_frame = exptime*fwc* signal.unit/np.max(signal)
+                if signal[mask_gain].size > 0:
+                    exp_frame = exptime*register_c* signal.unit/np.max(signal*gain)
+                if exp_frame.value < 0.120 :
+                    exp_frame = 0.120*exptime.unit
+                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                    print('WARNING: the signal level is saturated in some region of the spectrum')
+                    print('You can use a higher magnitude/lower exposure time to avoid it')
+                    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                num_frame = (exptime/exp_frame).astype(int)
+                mask_source = (signal.value/num_frame>=fwc)
+                mask_gain = (signal.value*gain/num_frame>=register_c)
+            signal[mask_source] = fwc* signal.unit*num_frame
+            return num_frame, exp_frame, signal, mask_gain
+          
