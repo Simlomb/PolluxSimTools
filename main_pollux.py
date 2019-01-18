@@ -85,7 +85,7 @@ if __name__ == '__main__':
                       help="Set the EMCCD in photon counting mode, 1 compute it, 0 does not", default='0')
     
     parser.add_option("-g", "--EM_gain",
-                      help="Set the EMCCD multiplication gain with numbers from 20 to 1000 (only implemented for the imaging mode) ", default='1000')
+                      help="Set the EMCCD multiplication gain with numbers from 1 to 1000 (only implemented for the imaging mode). Gain 1 is without multiplication gain ", default='1000')
 
     #usage: python main_pollux.py -e 1 -i hr1886 -m 22 -c MUV_SPEC 
     opts, args = parser.parse_args()

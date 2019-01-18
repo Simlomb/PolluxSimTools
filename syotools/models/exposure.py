@@ -516,9 +516,15 @@ class SpectrographicExposure(Exposure):
                 source_counts[~mask_final] = 0.* bg_counts.unit
                 snr = source_counts/np.sqrt(source_counts + 0.75*(bg_counts+dark+ cc_n))
             else:
+                enf = 2. #eccess noise factor
                 num_frame, exp_frame, source_counts, mask_gain = self.compute_num_frame(exptime,source_counts,self.gain_pollux)
                 source_counts[mask_gain] = 8.e4* source_counts.unit*num_frame
-                snr = source_counts / np.sqrt((source_counts + bg_counts+dark)*2+(ron**2*box_pixel*num_frame* bg_counts.unit)) #photon counting case               
+                if self.gain_pollux > 1:
+                     '''Do nothing '''             
+                else:
+                    ron = 3.1  
+                    enf = 1.
+                snr = source_counts / np.sqrt((source_counts + bg_counts+dark)*enf+(ron**2*box_pixel*num_frame* bg_counts.unit))
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -605,7 +611,7 @@ class SpectrographicExposure(Exposure):
         dim_array = np.shape(pixelized_matrix)#len(pixelized_matrix[0])
         dark = (1/3600.)*exptime/u.s #* bg_counts.unit
         noise_dark = np.ones((dim_array))*dark #dark current image
-        ron=50./self.gain_pollux
+        
         image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)              
         if self.counting_mode == 1:
             ron_image = 0.
@@ -617,15 +623,22 @@ class SpectrographicExposure(Exposure):
             final_image[mask_final] = num_frame*250.
             final_image[~mask_final] = 0.
         else:
-            gain_err = np.sqrt(2.)
+            if self.gain_pollux > 1.:
+                gain_err = np.sqrt(2.)
+                max_register = 5.e5
+                ron=50./self.gain_pollux
+            else:
+                gain_err = 0.015
+                max_register = 2.8e5
+                ron= 3.1
             gain_image = np.random.normal(np.ones((dim_array))*self.gain_pollux,gain_err,dim_array) # pixel non uniformity image with excess noise factor
             num_frame, exp_frame, image_electron,mask_gain = self.compute_num_frame(exptime,image_electron * u.dimensionless_unscaled,self.gain_pollux)
             ron = ron*num_frame
             ron_err = ron*0.015
             ron_image = np.random.normal(ron,ron_err,dim_array) # ron image
             final_image = image_electron*gain_image+ron_image
-            mask_gain = final_image/num_frame >= 5.e5 
-            final_image[mask_gain] = 5.e5*num_frame
+            mask_gain = final_image/num_frame >= max_register
+            final_image[mask_gain] = max_register *num_frame
         
         #final_image = np.zeros((self.num_pix_y,self.num_pix_x))
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -706,7 +719,12 @@ class SpectrographicExposure(Exposure):
         """
         
         fwc = 8.e4 # full well capacity
-        register_c = 5.e5 #register capacity
+        if gain > 1.:
+            register_c = 5.e5 #register capacity
+            min_exp_t = 0.120 # min exposure time
+        else:
+            register_c = 2.8e5 
+            min_exp_t = 24.
         #cc_n = 0.005 # clock charge induced noise
         num_frame = 1
         exp_frame = exptime
@@ -719,8 +737,8 @@ class SpectrographicExposure(Exposure):
             else:
                 exp_frame = exptime*threshold/np.max(signal)
                 num_frame = (exptime/exp_frame).astype(int)
-                if exp_frame.value < 0.120 :
-                    exp_frame = 0.120*exptime.unit
+                if exp_frame.value < min_exp_t :
+                    exp_frame = min_exp_t*exptime.unit
                     num_frame = (exptime/exp_frame).astype(int)
                 mask_register = (signal/num_frame)>=threshold#register_c.value
                 signal[mask_register] = threshold*num_frame
@@ -737,8 +755,8 @@ class SpectrographicExposure(Exposure):
                 exp_frame = exptime*fwc* signal.unit/np.max(signal)
                 if signal[mask_gain].size > 0:
                     exp_frame = exptime*register_c* signal.unit/np.max(signal*gain)
-                if exp_frame.value < 0.120 :
-                    exp_frame = 0.120*exptime.unit
+                if exp_frame.value < min_exp_t :
+                    exp_frame = min_exp_t*exptime.unit
                     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
                     print('WARNING: the signal level is saturated in some region of the spectrum')
                     print('You can use a higher magnitude/lower exposure time to avoid it')
