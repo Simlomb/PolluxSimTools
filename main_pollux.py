@@ -74,15 +74,15 @@ if __name__ == '__main__':
     parser.add_option("-c", "--channel_mode",
                       help="Channel and operation mode, it can be NUV_POL, MUV_POL, FUV_POL, NUV_SPEC, MUV_SPEC, FUV_SPEC", default='NUV_POL')
     parser.add_option("-s", "--show_plot",
-                      help="show the image and save it", default='1')
+                      help="show the image and save it. 1 show it, 0 does not.", default='1')
     parser.add_option("-f", "--file_name",
                       help="Name of the file to be saved", default='test')
     parser.add_option("-n", "--snr",
-                      help="Compute the S/N and plot it", default='1')
+                      help="Compute the S/N and plot it, 1 compute it, 0 does not", default='1')
     parser.add_option("-d", "--full_image",
-                      help="Compute the full image and plot it", default='0')
+                      help="Compute the full image and plot it, 1 compute it, 0 does not", default='0')
     parser.add_option("-p", "--photon_counting",
-                      help="Set the EMCCD in photon counting mode", default='0')
+                      help="Set the EMCCD in photon counting mode, 1 compute it, 0 does not", default='0')
     
     parser.add_option("-g", "--EM_gain",
                       help="Set the EMCCD multiplication gain with numbers from 20 to 1000 (only implemented for the imaging mode) ", default='1000')

@@ -544,7 +544,8 @@ class SpectrographicExposure(Exposure):
             print(msg1 + msg2)
         
         sed, _exptime = self.recover('sed', 'exptime')
-        _wave, bef, aper, wrange = self.recover('spectrograph.wave', 'spectrograph.bef','telescope.aperture','spectrograph.wrange')
+        _wave, bef, aper, wrange, R = self.recover('spectrograph.wave', 'spectrograph.bef','telescope.aperture','spectrograph.wrange','spectrograph.R')
+        self.R = R
         exptime = _exptime.to(u.s)[0] #assume that all are the same
         if sed.fluxunits.name == "abmag":
             funit = u.ABmag
@@ -605,7 +606,6 @@ class SpectrographicExposure(Exposure):
         dark = (1/3600.)*exptime/u.s #* bg_counts.unit
         noise_dark = np.ones((dim_array))*dark #dark current image
         ron=50./self.gain_pollux
-        ron_err = ron*0.015
         image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)              
         if self.counting_mode == 1:
             ron_image = 0.
@@ -615,20 +615,23 @@ class SpectrographicExposure(Exposure):
             final_image = image_electron*self.gain_pollux+cc_n*0.75*gain_image
             mask_final = final_image >= num_frame*250.
             final_image[mask_final] = num_frame*250.
-            final_image[~mask_final] = cc_n*0.75*gain_image[~mask_final]
+            final_image[~mask_final] = 0.
         else:
-            ron_image = np.random.normal(ron,ron_err,dim_array) # ron image
             gain_err = np.sqrt(2.)
             gain_image = np.random.normal(np.ones((dim_array))*self.gain_pollux,gain_err,dim_array) # pixel non uniformity image with excess noise factor
             num_frame, exp_frame, image_electron,mask_gain = self.compute_num_frame(exptime,image_electron * u.dimensionless_unscaled,self.gain_pollux)
+            ron = ron*num_frame
+            ron_err = ron*0.015
+            ron_image = np.random.normal(ron,ron_err,dim_array) # ron image
             final_image = image_electron*gain_image+ron_image
-        mask_gain = final_image >= 5.e5 
-        final_image[mask_gain] = 5.e5
+            mask_gain = final_image/num_frame >= 5.e5 
+            final_image[mask_gain] = 5.e5*num_frame
+        
         #final_image = np.zeros((self.num_pix_y,self.num_pix_x))
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print('This object required ', num_frame, ' frames of ', exp_frame.value, 's each')   
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-
+        
         self._final_image = pre_encode(final_image)
         self._wave_image = pre_encode(wave_image)
         print('Image done!')
@@ -668,12 +671,12 @@ class SpectrographicExposure(Exposure):
         index_x = map_p[1][i]
         iflux = np.interp(wave, swave, sflux, left=0., right=0.) * (u.erg / u.s / u.cm**2 / u.AA)
         bef_flux = np.interp(wave, bwave, bflux, left=0., right=0.)
-        
+        delta_lambda = wave/self.R
         #print(np.shape(iflux))
         phot_energy = const.h.to(u.erg * u.s) * const.c.to(u.cm / u.s) / (wave*1.e-8) / u.ct
         scaled_aeff = aeff * (aper / (15 * u.m))**2
-        source_counts = iflux / phot_energy * scaled_aeff * exptime
-        bg_counts = bef_flux / phot_energy * scaled_aeff * exptime #* delta_lambda
+        source_counts = iflux / phot_energy * scaled_aeff * exptime * delta_lambda
+        bg_counts = bef_flux / phot_energy * scaled_aeff * exptime * delta_lambda
         matrix_mask = np.zeros((num_pix_y,num_pix_x))
         background_mask = np.zeros((num_pix_y,num_pix_x))
         matrix_mask[index_y.astype(int),index_x.astype(int)] = source_counts
@@ -703,7 +706,7 @@ class SpectrographicExposure(Exposure):
         """
         
         fwc = 8.e4 # full well capacity
-        register_c = 5.e9 #register capacity
+        register_c = 5.e5 #register capacity
         #cc_n = 0.005 # clock charge induced noise
         num_frame = 1
         exp_frame = exptime
