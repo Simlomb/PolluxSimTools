@@ -6,6 +6,9 @@ simulation tools for the LUVOIR Surveyor STDT based on https://github.com/tumlin
 
 (2) This tool has been tested with Python 2.7.15rc1 there might be some incompatibilities with python 3.
 
+(3) Please add the path to the folder /data_reference/cdbs to your .bashrc like this:
+    export PYSYN_CDBS=/path_to_simulator/PolluxSimTools/data_reference/cdbs
+
 
 With this new tool the calculations are quite easy. You would need to have python and install bokeh (https://bokeh.pydata.org/en/latest/docs/installation.html) and this should be all (you can contact me if you have issues).
 
