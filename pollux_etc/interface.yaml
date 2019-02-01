@@ -23,14 +23,14 @@
     ref: "exp_slider"
     title: "Exptime (hours)"
     value: 1.0
-    range: !!python/tuple [0.00003, 50.0, 0.1]
+    range: !!python/tuple [0.00003333, 50.0, 0.1]
     width: 200 
     callback: *callback
 - !Slider: &mag_slider
     ref: "mag_slider"
     title: "Magnitude [AB]"
     value: 21.0
-    range: !!python/tuple [5.0, 30.0, 0.1]
+    range: !!python/tuple [-10., 30.0, 0.1]
     width: 200 
     callback: *callback
 - !Slider: &red_slider

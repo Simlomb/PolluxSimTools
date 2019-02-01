@@ -216,6 +216,9 @@ class POLLUX_IMAGE(SYOTool):
     def plot_image(self):
        """
        """
+       #if self.grating[0] == 'F':
+           #plt.imshow(np.log10(self._final_image),  origin='lower left', cmap='hot', interpolation='none',aspect='auto')
+       #else:
        plt.imshow(self._final_image,  origin='lower left', cmap='hot', interpolation='none',aspect='auto')
        plt.colorbar()
        if show_plot == 1:

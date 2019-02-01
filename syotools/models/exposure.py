@@ -612,7 +612,8 @@ class SpectrographicExposure(Exposure):
         dark = (1/3600.)*exptime/u.s #* bg_counts.unit
         noise_dark = np.ones((dim_array))*dark #dark current image
         
-        image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)              
+        image_electron = np.random.poisson(lam=pixelized_matrix+noise_dark)    
+        print('You requested the counting_mode=%i and the gain=%i' %(self.counting_mode,self.gain_pollux))          
         if self.counting_mode == 1:
             ron_image = 0.
             gain_image = np.random.normal(np.ones((dim_array)),0.001,dim_array) # pixel non uniformity image
