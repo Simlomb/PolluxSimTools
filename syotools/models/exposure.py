@@ -477,7 +477,7 @@ class SpectrographicExposure(Exposure):
             msg2 = " with {} in mode {}".format(self.spectrograph.name, self.spectrograph.mode)
             print(msg1 + msg2)
         print('You requested the calculations for: ',self.spectrograph.name, self.spectrograph._mode)
-            
+        
         sed, _exptime = self.recover('sed', 'exptime')
         _wave, aeff, bef, aper, R, wrange = self.recover('spectrograph.wave', 
                                                          'spectrograph.aeff', 

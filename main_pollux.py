@@ -66,7 +66,7 @@ if __name__ == '__main__':
                            "liner  -->  Liner, "
                            "flam  -->  Flat in F_Lambda", default='qso')
     parser.add_option("-r", "--redshift",
-                      help="redshift", default='0.')
+                      help="redshift", default='0.0')
     parser.add_option("-m", "--ABmag",
                       help="AB magnitude of the object", default='21.')
     parser.add_option("-a", "--aperture",
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     #print "Loading data ..."
     expt_pollux = pre_encode(float(opts.exposure_time) * u.hour)
     ap_pollux = pre_encode(float(opts.aperture) * u.m)
-    red_pollux = pre_encode(float(opts.redshift) * u.dimensionless_unscaled)
+    red_pollux = pre_encode(float(opts.redshift)* u.dimensionless_unscaled)
     mag_pollux = pre_encode(float(opts.ABmag) * u.mag('AB'))
     grating_pollux = str(opts.channel_mode)
     spectrum_pollux = str(opts.input_sed)
@@ -119,7 +119,7 @@ class POLLUX_IMAGE(SYOTool):
     save_dir = os.path.join(os.environ['LUVOIR_SIMTOOLS_DIR'],'saves')
     
     #must include this to set defaults before the interface is constructed
-    tool_defaults = {'redshift': pre_encode(0.0 * u.dimensionless_unscaled),
+    tool_defaults = {'redshift': pre_encode(0.25 * u.dimensionless_unscaled),
                      'renorm_magnitude': pre_encode(21.0 * u.mag('AB')),
                      'exptime': pre_encode(1.0 * u.hour),
                      'grating': "NUV_POL",
@@ -131,7 +131,7 @@ class POLLUX_IMAGE(SYOTool):
         self.grating = grating_pollux
         self.aperture = ap_pollux
         self.exptime = expt_pollux
-        self.redshift = red_pollux 
+        self.redshift = pre_encode(red_pollux[1]['value']) 
         self.renorm_magnitude = mag_pollux 
         self.spectrum_type = spectrum_pollux
         self.tool_preinit()
