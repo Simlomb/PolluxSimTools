@@ -18,12 +18,19 @@ With this new tool the calculations are quite easy. You would need to have pytho
 If you are using anaconda for installation, do the following:
 
 conda config --add channels http://ssb.stsci.edu/astroconda
+
 conda create -n test python=2
+
 conda activate test
+
 git clone https://github.com/Simlomb/PolluxSimTools.git
+
 cd PolluxSimTools
+
 conda install numpy astropy pysynphot pyyaml scipy specutils bokeh matplotlib
+
 export PYSYN_CDBS=./data_reference/cdbs/
+
 python main_pollux.py
 
 If you are not using anaconda, and you have an error related with pysynphot, please try to install pysynphot with the package manager.
