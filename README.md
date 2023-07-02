@@ -27,6 +27,7 @@ conda activate test
 git clone https://github.com/Simlomb/PolluxSimTools.git
 
 cd PolluxSimTools
+git checkout origin PolluxSimTool2023
 
 conda install numpy astropy pysynphot pyyaml scipy specutils bokeh matplotlib
 
