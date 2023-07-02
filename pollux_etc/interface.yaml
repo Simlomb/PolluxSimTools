@@ -14,8 +14,8 @@
 - !Slider: &ap_slider
     ref: "ap_slider"
     title: "Aperture (meters)"
-    value: 15.
-    range: !!python/tuple [8.0, 16.0, 1.0]
+    value: 8.
+    range: !!python/tuple [7.5, 8.5, 1.0]
     tags: [4, 5, 6, 6]
     width: 200 
     callback: *callback
@@ -50,7 +50,7 @@
 - !Select: &grating_select
     ref: "grating_select"
     title: "Channel / Setting"
-    value: "NUV_POL (R = 130,440)"
+    value: "NUV_POL (R = 133,156)"
     options: !self.grating_options
     width: 200 
     on_change: ['value', !self.controller ]
@@ -101,8 +101,8 @@
 - !Range1d: &flux_xrange
     ref: "flux_xrange"
     start: 900.0
-    end: 4000.0
-    bounds: !!python/tuple [900.0, 4000.0]
+    end: 4720.0
+    bounds: !!python/tuple [900.0, 4720.0]
 - !Range1d: &flux_yrange
     ref: "flux_yrange"
     start: 0.0
@@ -130,12 +130,12 @@
 - !Range1d: &snr_xrange
     ref: "snr_xrange"
     start: 900.0
-    end: 4000.0
-    bounds: !!python/tuple [900.0, 4000.0]
+    end: 4720.0
+    bounds: !!python/tuple [900.0, 4720.0]
 - !Range1d: &snr_yrange
     ref: "snr_yrange"
     start: 0.0
-    end: 40.0
+    end: 0.01
     bounds: !!python/tuple [null, null]
 #----> SNR ----> Figure
 - !Figure: &snr_figure

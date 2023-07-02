@@ -59,7 +59,7 @@ def load_fesc(spec):
     sp = sp.renorm(30., 'abmag', pys.ObsBandpass(band))
     sp.convert('abmag')
     sp.convert('nm')
-
+    
 def load_pysfits(spec):
     fname = spec['file']
     band = spec.get('band', 'johnson,v')

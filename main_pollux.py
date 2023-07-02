@@ -70,26 +70,23 @@ if __name__ == '__main__':
     parser.add_option("-m", "--ABmag",
                       help="AB magnitude of the object", default='21.')
     parser.add_option("-a", "--aperture",
-                      help="Telescope aperture in m", default='15.')
+                      help="Telescope aperture in m", default='8.')
     parser.add_option("-c", "--channel_mode",
-                      help="Channel and operation mode, it can be NUV_POL, MUV_POL, FUV_POL, NUV_SPEC, MUV_SPEC, FUV_SPEC", default='NUV_POL')
+                      help="Channel and operation mode, it can be NUV_POL, MUV_POL, NUV_SPEC, MUV_SPEC", default='NUV_POL')
     parser.add_option("-s", "--show_plot",
                       help="show the image and save it. 1 show it, 0 does not.", default='1')
     parser.add_option("-f", "--file_name",
                       help="Name of the file to be saved", default='test')
     parser.add_option("-n", "--snr",
                       help="Compute the S/N and plot it, 1 compute it, 0 does not", default='1')
-    parser.add_option("-d", "--full_image",
-                      help="Compute the full image and plot it, 1 compute it, 0 does not", default='0')
     parser.add_option("-p", "--photon_counting",
                       help="Set the EMCCD in photon counting mode, 1 compute it, 0 does not", default='0')
-    
     parser.add_option("-g", "--EM_gain",
                       help="Set the EMCCD multiplication gain with numbers from 1 to 1000 (only implemented for the imaging mode). Gain 1 is without multiplication gain ", default='1000')
 
     #usage: python main_pollux.py -e 1 -i hr1886 -m 22 -c MUV_SPEC 
     opts, args = parser.parse_args()
-    #print "Loading data ..."
+    print ("Loading data ...")
     expt_pollux = pre_encode(float(opts.exposure_time) * u.hour)
     ap_pollux = pre_encode(float(opts.aperture) * u.m)
     red_pollux = pre_encode(float(opts.redshift)* u.dimensionless_unscaled)
@@ -97,7 +94,7 @@ if __name__ == '__main__':
     grating_pollux = str(opts.channel_mode)
     spectrum_pollux = str(opts.input_sed)
     snr_pollux = int(opts.snr)
-    image_pollux = int(opts.full_image)
+    image_pollux = 0
     photon_count = int(opts.photon_counting)
     gain = float(opts.EM_gain)
     show_plot = int(opts.show_plot)
@@ -123,7 +120,7 @@ class POLLUX_IMAGE(SYOTool):
                      'renorm_magnitude': pre_encode(21.0 * u.mag('AB')),
                      'exptime': pre_encode(1.0 * u.hour),
                      'grating': "NUV_POL",
-                     'aperture': pre_encode(15.0 * u.m),
+                     'aperture': pre_encode(8.0 * u.m),
                      'spectrum_type': 'qso'}
     def __init__(self):
         print('Initializing the parameters ...')
@@ -159,13 +156,14 @@ class POLLUX_IMAGE(SYOTool):
         Pre-initialize any required attributes for the interface.
         """
         #initialize engine objects
+        print (' Initializing the parameters')
         self.telescope = Telescope(temperature=pre_encode(280.0*u.K))
         self.spectrograph = Spectropolarimeter()
         self.exposure = Exposure()
         self.telescope.add_spectrograph(self.spectrograph)
         self.spectrograph.add_exposure(self.exposure)
         #set interface variables
-       
+        print ('Initialization done')
      
     tool_postinit = None
         
@@ -178,6 +176,7 @@ class POLLUX_IMAGE(SYOTool):
         #at once without recalculating every time we change something
               
         #Update all the parameters
+        print (' Starting to update the exposure')
         self.telescope.aperture = self.aperture
         self.spectrograph.mode = self.grating
         self.exposure.exptime = pre_decode(self.exptime)
@@ -194,6 +193,7 @@ class POLLUX_IMAGE(SYOTool):
     def plot_snr(self):
        """
        """
+       print ('Preparing the S/N plot')
        plt.figure(1)
        plt.subplot(211)
        plt.plot(self.template_wave,self.template_flux, '-b', label='source')

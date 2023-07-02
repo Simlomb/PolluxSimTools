@@ -493,6 +493,7 @@ class SpectrographicExposure(Exposure):
             funit = u.ph / u.s / u.cm**2 / u.AA
         else:
             funit = u.Unit(sed.fluxunits.name)
+       
         wave = _wave.to(u.AA)
         swave = (sed.wave * u.Unit(sed.waveunits.name)).to(u.AA)
         sflux = (sed.flux * funit).to(u.erg / u.s / u.cm**2 / u.AA, equivalencies=u.spectral_density(swave))
@@ -559,35 +560,37 @@ class SpectrographicExposure(Exposure):
         else:
             funit = u.Unit(sed.fluxunits.name)
         script_dir = os.path.abspath(os.path.dirname(__file__))
-        with open(script_dir+'/../data/POLUX_map.pickle', 'rb') as h:
+        with open(script_dir+'/../data/'+self.spectrograph.mode+'_map.pickle', 'rb') as h:
             maps_pollux = pickle.load(h)
+            print('SHAPE_MAPS  ', np.shape(maps_pollux))
         if self.spectrograph.mode == 'NUV_POL':
-            map_pollux = maps_pollux[0][0]
-            map_pollux_p = maps_pollux[0][1]
-            self.num_pix_x = 20460
-            self.num_pix_y = 3846
+            map_pollux = maps_pollux[1]
+            map_pollux_p = maps_pollux[0]
+            print('SHAPE_MAPS  ', np.shape(map_pollux), np.shape(map_pollux_p))
+            self.num_pix_x = np.int(20460/2)
+            self.num_pix_y = np.int(3846/2)
         elif self.spectrograph.mode == 'MUV_POL':
-            map_pollux = maps_pollux[1][0]
-            map_pollux_p = maps_pollux[1][1]
-            self.num_pix_x = 20460
-            self.num_pix_y = 3076
+            map_pollux = maps_pollux[1]
+            map_pollux_p = maps_pollux[0]
+            self.num_pix_x = (20460/2).astype(int)
+            self.num_pix_y = (3076/2).astype(int)
         elif self.spectrograph.mode == 'FUV_POL':
             map_pollux = maps_pollux[2][0]
             map_pollux_p = maps_pollux[2][1]
-            self.num_pix_x = 31306
-            self.num_pix_y = 3076
+            self.num_pix_x = (31306/2).astype(int)
+            self.num_pix_y = (3076/2).astype(int)
         elif self.spectrograph.mode == 'NUV_SPEC':
-            map_pollux = maps_pollux[3]
-            self.num_pix_x = 20460
-            self.num_pix_y = 3846
+            map_pollux = np.copy(maps_pollux)
+            self.num_pix_x = np.int(20460/2)
+            self.num_pix_y = np.int(3846/2)
         elif self.spectrograph.mode == 'MUV_SPEC':
-            map_pollux = maps_pollux[4]
-            self.num_pix_x = 20460
-            self.num_pix_y = 3076
+            map_pollux = np.copy(maps_pollux)
+            self.num_pix_x = (20460/2).astype(int)
+            self.num_pix_y = (3076/2).astype(int)
         elif self.spectrograph.mode == 'FUV_SPEC':
-            map_pollux = maps_pollux[5]
-            self.num_pix_x = 31306
-            self.num_pix_y = 3076
+            map_pollux = np.copy(maps_pollux)
+            self.num_pix_x = (31306/2).astype(int)
+            self.num_pix_y = np.int(3076/2)
         matrix=matrix_mask=wave_mask = np.zeros((self.num_pix_y,self.num_pix_x)) #=background_mask=source_mask
         for i in range(len(map_pollux[2])):
             print('Number of orders computed: ', i)
@@ -603,8 +606,8 @@ class SpectrographicExposure(Exposure):
                 #source_mask = source_mask + source_mask1
                 wave_mask = wave_mask + wave_mask1
             
-        pixelized_matrix = self.bin_ndarray(matrix, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
-        wave_image = self.bin_ndarray(wave_mask, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
+        pixelized_matrix = np.copy(matrix)#self.bin_ndarray(matrix, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
+        wave_image = np.copy(wave_mask)#self.bin_ndarray(wave_mask, new_shape=(np.int(self.num_pix_y/2),np.int(self.num_pix_x/2)), operation='sum')
         #make ccd image
         
         dim_array = np.shape(pixelized_matrix)#len(pixelized_matrix[0])
@@ -674,9 +677,9 @@ class SpectrographicExposure(Exposure):
     def _compute_matrix_pollux(self,map_p,sed,bef,funit,aper,exptime,num_pix_x,num_pix_y,i):
        
         wave = map_p[2][i]
-        bwave = bef[0]
-        bflux = bef[1]
-        swave = (sed.wave * u.Unit(sed.waveunits.name)).to(u.AA)
+        bwave = bef[0] #background 
+        bflux = bef[1] 
+        swave = (sed.wave * u.Unit(sed.waveunits.name)).to(u.AA) #signal
         sflux = (sed.flux * funit).to(u.erg / u.s / u.cm**2 / u.AA, equivalencies=u.spectral_density(swave))
         aeff = map_p[3][i]*0.87
         delta_x = map_p[4][i]

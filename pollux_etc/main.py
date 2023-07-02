@@ -12,6 +12,7 @@ from __future__ import (print_function, division, absolute_import, with_statemen
 import os
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
+print(' path', script_dir)
 
 import numpy as np
 import astropy.units as u
