@@ -11,7 +11,9 @@ HOW TO INSTALL
 (3) (Temporary fix to a bug) Please add this line with the correct path in which you have the pollux simulato to your .bashrc like:
 
     export PYSYN_CDBS=/path_to_simulator/PolluxSimTools/data_reference/cdbs
+    
 Please add also the path to the simulator to your PYTHONPATH in the .bashrc like:
+
     export PYTHONPATH=$PYTHONPATH:/path_to_simulator/PolluxSimTools/
     
 With this new tool the calculations are quite easy. You would need to have python and install bokeh (https://bokeh.pydata.org/en/latest/docs/installation.html) and this should be all (you can contact me if you have issues).
@@ -27,6 +29,7 @@ conda activate test
 git clone https://github.com/Simlomb/PolluxSimTools.git
 
 cd PolluxSimTools
+
 git checkout origin PolluxSimTool2023
 
 conda install numpy astropy pysynphot pyyaml scipy specutils bokeh matplotlib
