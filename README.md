@@ -4,7 +4,7 @@ simulation tools for the LUVOIR Surveyor STDT based on https://github.com/tumlin
 HOW TO INSTALL
 
 (1) you must have bokeh 0.12 installed to use these tools 
-    [http://bokeh.pydata.org/en/latest/docs/installation.html](https://docs.bokeh.org/en/latest/docs/first_steps/installation.html)
+    (https://docs.bokeh.org/en/latest/docs/first_steps/installation.html)
 
 (2) This tool has been tested with Python 2.7.15rc1 there might be some incompatibilities with python 3.
 
